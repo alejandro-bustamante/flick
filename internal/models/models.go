@@ -9,6 +9,7 @@ type MediaInfo struct {
 	Quality      string
 	Source       string
 	Language     string
+	Remaining    []string
 	OriginalName string // Para debugging
 }
 

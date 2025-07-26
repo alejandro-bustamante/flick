@@ -3,42 +3,39 @@ package implementations
 import "strings"
 
 type Cleaner struct {
-	junkPatterns []string
+	junkPatterns map[string]struct{}
 	minLength    int
 }
 
 func NewCleaner() *Cleaner {
-	return &Cleaner{
-		junkPatterns: []string{"xxx", "rarbg", "yts", "etrg", "yify"},
-		minLength:    2,
+	patterns := []string{
+		"xxx", "rarbg", "yts", "etrg", "yify",
+		"720p", "1080p", "4k", "2160p", "480p", "bluray", "brrip",
+		"web-dl", "webrip", "hdrip", "hdtv", "netflix", "amzn",
+		"spanish", "latino", "english", "dual",
 	}
+	junk := make(map[string]struct{}, len(patterns))
+	for _, p := range patterns {
+		junk[strings.ToLower(p)] = struct{}{}
+	}
+
+	return &Cleaner{
+		junkPatterns: junk,
+		minLength:    1,
+	}
+}
+
+func (c *Cleaner) IsJunk(token string) bool {
+	_, exists := c.junkPatterns[strings.ToLower(token)]
+	return exists
 }
 
 func (c *Cleaner) Clean(tokens []string) []string {
 	var cleaned []string
-
 	for _, token := range tokens {
 		if !c.IsJunk(token) && len(token) >= c.minLength {
 			cleaned = append(cleaned, token)
 		}
 	}
-
 	return cleaned
-}
-
-func (c *Cleaner) IsJunk(token string) bool {
-	lower := strings.ToLower(token)
-
-	for _, pattern := range c.junkPatterns {
-		if strings.Contains(lower, pattern) {
-			return true
-		}
-	}
-
-	// Tokens muy cortos que no son años ni episodios
-	if len(token) <= 1 {
-		return true
-	}
-
-	return false
 }
