@@ -1,4 +1,4 @@
-package implementations
+package transformations
 
 import (
 	"fmt"
@@ -22,7 +22,7 @@ func (v *Validator) Validate(info *models.MediaInfo) error {
 		return err
 	}
 
-	if !info.IsMovie && info.Season == 0 {
+	if info.Season == 0 {
 		return fmt.Errorf("TV show must have season number")
 	}
 

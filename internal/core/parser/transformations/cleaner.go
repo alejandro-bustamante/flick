@@ -1,19 +1,12 @@
-package implementations
+package transformations
 
 import "strings"
 
 type Cleaner struct {
 	junkPatterns map[string]struct{}
-	minLength    int
 }
 
-func NewCleaner() *Cleaner {
-	patterns := []string{
-		"xxx", "rarbg", "yts", "etrg", "yify",
-		"720p", "1080p", "4k", "2160p", "480p", "bluray", "brrip",
-		"web-dl", "webrip", "hdrip", "hdtv", "netflix", "amzn",
-		"spanish", "latino", "english", "dual",
-	}
+func NewCleaner(patterns []string) *Cleaner {
 	junk := make(map[string]struct{}, len(patterns))
 	for _, p := range patterns {
 		junk[strings.ToLower(p)] = struct{}{}
@@ -21,11 +14,10 @@ func NewCleaner() *Cleaner {
 
 	return &Cleaner{
 		junkPatterns: junk,
-		minLength:    1,
 	}
 }
 
-func (c *Cleaner) IsJunk(token string) bool {
+func (c *Cleaner) isJunk(token string) bool {
 	_, exists := c.junkPatterns[strings.ToLower(token)]
 	return exists
 }
@@ -33,7 +25,7 @@ func (c *Cleaner) IsJunk(token string) bool {
 func (c *Cleaner) Clean(tokens []string) []string {
 	var cleaned []string
 	for _, token := range tokens {
-		if !c.IsJunk(token) && len(token) >= c.minLength {
+		if !c.isJunk(token) {
 			cleaned = append(cleaned, token)
 		}
 	}
