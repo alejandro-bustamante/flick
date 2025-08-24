@@ -22,7 +22,7 @@ func LoadData(path string) (*models.Config, error) {
 }
 
 func LoadSettings(path string) (*models.UserSettings, error) {
-	settings, err := os.ReadFile("./settings.toml")
+	settings, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}

@@ -2,6 +2,7 @@ package core
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 	"strconv"
 
@@ -36,18 +37,32 @@ func NewOrganizer(p Parser, f Finder, watchDir, moviesDir, seriesDir string) *Or
 }
 
 // Equivalent to a dry run
-func (o *Organizer) GetFinalDir(filename string) (filePath string) {
-	cleanFileName := o.parser.ParseNormalized(filename)
-	mediaInfo, _ := o.finder.GetMediaInfo(*cleanFileName.MediaInfo)
+func (o *Organizer) GetFinalDir(filePath string) (finalPath string) {
+	info, err := os.Stat(filePath)
+	if err != nil {
+		return ""
+	}
+	if info.IsDir() {
+		// Should not be a directory
+		return ""
+	}
+
+	fileName := filepath.Base(filePath)
+	cleanFileName := o.parser.ParseNormalized(fileName)
+	mediaInfo, err := o.finder.GetMediaInfo(*cleanFileName.MediaInfo)
+	if err != nil {
+		fmt.Println(err)
+		return ""
+	}
 	fmt.Println(mediaInfo.Title)
 	fmt.Println(mediaInfo.Year)
 
-	var finalPath, folderName string
 	if mediaInfo.IsSeries {
-		finalPath = o.seriesDir + folderName
+		finalPath = o.seriesDir + mediaInfo.Title
 	} else {
-		folderName := mediaInfo.Title + strconv.Itoa(mediaInfo.Year)
-		finalPath = filepath.Join(o.moviesDir, folderName, folderName+filepath.Ext(filename))
+		folderName := mediaInfo.Title + "(" + strconv.Itoa(mediaInfo.Year) + ")"
+		// E.G. /base/movies/directory/Titatnic(1999)/Titanic(1999).mkv
+		finalPath = filepath.Join(o.moviesDir, folderName, folderName+filepath.Ext(fileName))
 	}
 
 	return finalPath

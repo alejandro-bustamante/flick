@@ -13,12 +13,15 @@ import (
 )
 
 func main() {
-	data, err := config.LoadData("patterns.toml")
+	// data, err := config.LoadData("patterns.toml")
+	data, err := config.LoadData("/home/alejandro/nvme/Repositorios/Developer/flick/patterns.toml")
+
 	if err != nil {
 		panic(err)
 	}
 
-	stgs, err := config.LoadSettings("settings.toml")
+	// sttgs, err := config.LoadSettings("settings.toml")
+	sttgs, err := config.LoadSettings("/home/alejandro/nvme/Repositorios/Developer/flick/settings.toml")
 	if err != nil {
 		panic(err)
 	}
@@ -26,15 +29,13 @@ func main() {
 	tokenizer := transformations.NewTokenizer(data.Tokenizer.Separators)
 	cleaner := transformations.NewCleaner(data.Cleaner.JunkPatterns)
 	extrator := transformations.NewExtractor(data.Extractor.YearRange[:])
-	logger := transformations.NewLogger("info")
+	logger := transformations.NewLogger("debug")
 	nomalizer := transformations.NewNormalizer()
 
 	p := parser.NewMediaParser(tokenizer, cleaner, extrator, logger, nomalizer)
-	result := p.Parse("The-Shawshank-redemption.2019.720p.WEBRip.x264-[YTS.AM].mp4")
-	fmt.Println(result.MediaInfo.Title)
 
-	f := finder.NewTMDBFinder(stgs.Secrets.TMDB_API_Key)
-	o := core.NewOrganizer(p, f, stgs.Directories.Watch, stgs.Directories.Movies, stgs.Directories.Series)
-	fmt.Println(o.GetFinalDir("The-Shawshank-redemption.2019.720p.WEBRip.x264-[YTS.AM].mp4"))
+	f := finder.NewTMDBFinder(sttgs.Secrets.TMDB_API_Key)
+	o := core.NewOrganizer(p, f, sttgs.Directories.Watch, sttgs.Directories.Movies, sttgs.Directories.Series)
+	fmt.Println(o.GetFinalDir("/home/alejandro/nvme/Repositorios/Developer/test_flick/Titanic(1999).720p.WEBRip.x264-[YTS.AM].mp4"))
 
 }
