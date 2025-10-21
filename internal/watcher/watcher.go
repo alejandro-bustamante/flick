@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/alejandro-bustamante/flick/internal/core"
 	"github.com/fsnotify/fsnotify"
 )
 
@@ -19,23 +20,26 @@ type WatcherConfig struct {
 }
 
 type FolderWatcher struct {
-	config    WatcherConfig
-	handler   func(string)
+	config WatcherConfig
+	// handler   func(string)
+	organizer *core.Organizer
 	watcher   *fsnotify.Watcher
 	stopCh    chan bool
 	pendingCh chan string
 	done      chan bool
 }
 
-func NewWatcher(config WatcherConfig, handler func(string)) (*FolderWatcher, error) {
+// func NewWatcher(config WatcherConfig, organizer *core.Organizer, handler func(string)) (*FolderWatcher, error) {
+func NewWatcher(config WatcherConfig, organizer *core.Organizer) (*FolderWatcher, error) {
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
 		return nil, fmt.Errorf("error creating a watcher: %v", err)
 	}
 
 	fw := &FolderWatcher{
-		config:    config,
-		handler:   handler,
+		config: config,
+		// handler:   handler,
+		organizer: organizer,
 		watcher:   watcher,
 		stopCh:    make(chan bool),
 		pendingCh: make(chan string, 100),
@@ -137,7 +141,9 @@ func (fw *FolderWatcher) processStability() {
 			for filePath, addTime := range pending {
 				if now.Sub(addTime) >= fw.config.StabilityDelay {
 					if fw.isFileStable(filePath) {
-						fw.handler(filePath)
+						// fw.handler(filePath)
+						out := fw.organizer.GetFinalDir(filePath)
+						log.Printf("Archivo procesado: %s, Destino final: %s\n", filePath, out)
 						delete(pending, filePath)
 					} else {
 						// Reset the time if the file is still changing

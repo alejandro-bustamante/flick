@@ -36,20 +36,13 @@ func main() {
 	f := finder.NewTMDBFinder(sttgs.Secrets.TMDB_API_Key)
 	o := core.NewOrganizer(p, f, sttgs.Directories.Watch, sttgs.Directories.Movies, sttgs.Directories.Series)
 
-	// --- Lógica del Watcher (sin cambios) ---
-	fileHandler := func(filePath string) {
-		finalDir := o.GetFinalDir(filePath)
-		// Usamos log en lugar de fmt para un output más estándar en daemons
-		log.Printf("Archivo procesado: %s, Destino final: %s\n", filePath, finalDir)
-	}
-
 	watcherConfig := watcher.WatcherConfig{
 		Path:           sttgs.Directories.Watch,
 		StabilityDelay: 2 * time.Second,
 		Recursive:      true,
 	}
 
-	folderWatcher, err := watcher.NewWatcher(watcherConfig, fileHandler)
+	folderWatcher, err := watcher.NewWatcher(watcherConfig, o)
 	if err != nil {
 		log.Fatalf("Error al crear el watcher: %v", err)
 	}
