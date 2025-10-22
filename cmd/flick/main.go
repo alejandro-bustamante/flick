@@ -14,7 +14,7 @@ import (
 )
 
 func main() {
-	// --- Carga de configuración (sin cambios) ---
+	// --- Load config (sin cambios) ---
 	data, err := config.LoadData("/home/alejandro/nvme/Repositorios/Developer/flick/patterns.toml")
 	if err != nil {
 		log.Fatalf("Error al cargar patterns.toml: %v", err)
@@ -25,7 +25,7 @@ func main() {
 		log.Fatalf("Error al cargar settings.toml: %v", err)
 	}
 
-	// --- Inicialización de componentes (sin cambios) ---
+	// --- Initialize components ---
 	tokenizer := transformations.NewTokenizer(data.Tokenizer.Separators)
 	cleaner := transformations.NewCleaner(data.Cleaner.JunkPatterns)
 	extrator := transformations.NewExtractor(data.Extractor.YearRange[:])
@@ -47,22 +47,18 @@ func main() {
 		log.Fatalf("Error al crear el watcher: %v", err)
 	}
 
-	// Iniciamos el watcher para que se ejecute en segundo plano
+	// --- Start watcher ---
 	err = folderWatcher.Start()
 	if err != nil {
 		log.Fatalf("Error al iniciar el watcher: %v", err)
 	}
 
-	// --- Integración del Daemon ---
-	// 1. Creamos una nueva instancia del daemon.
+	// --- Start the daemon (blocking function) ---
 	flickDaemon, err := daemon.NewDaemon()
 	if err != nil {
 		log.Fatalf("No se pudo iniciar el daemon: %v", err)
 	}
 
-	// 2. Iniciamos el daemon. Esta función es bloqueante y se encargará
-	//    de mantener la aplicación viva, reemplazando a select {}.
-	//    También manejará el apagado seguro al recibir señales como Ctrl+C.
 	flickDaemon.Start()
 
 	log.Println("Flick se ha detenido.")

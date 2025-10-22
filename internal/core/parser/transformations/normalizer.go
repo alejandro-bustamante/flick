@@ -1,6 +1,7 @@
 package transformations
 
 import (
+	"strings"
 	"unicode"
 
 	"golang.org/x/text/runes"
@@ -31,7 +32,7 @@ func (n *Normalizer) NormalizeTokens(tokens []string) []string {
 	// Returns transformed text, number of bytes read, and error.
 	for i, token := range tokens {
 		text, _, _ := transform.String(t, token)
-		tokens[i] = text
+		tokens[i] = strings.ToLower(text)
 	}
 	return tokens
 }
