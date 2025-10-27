@@ -8,6 +8,7 @@ type MediaInfo struct {
 	Episode      int
 	Remaining    []string
 	OriginalName string // For debugging
+	Accuracy     int    // (0-5)
 }
 
 type ParseResult struct {

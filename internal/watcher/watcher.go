@@ -143,7 +143,7 @@ func (fw *FolderWatcher) processStability() {
 					if fw.isFileStable(filePath) {
 						// fw.handler(filePath)
 						out := fw.organizer.GetFinalDir(filePath)
-						log.Printf("Archivo procesado: %s, Destino final: %s\n", filePath, out)
+						log.Printf("File processed: %s,\n Final dir: %s\n", filePath, out)
 						delete(pending, filePath)
 					} else {
 						// Reset the time if the file is still changing

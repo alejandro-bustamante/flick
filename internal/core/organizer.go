@@ -56,6 +56,7 @@ func (o *Organizer) GetFinalDir(filePath string) (finalPath string) {
 	}
 	fmt.Println(mediaInfo.Title)
 	fmt.Println(mediaInfo.Year)
+	fmt.Printf("Accuracy: %v\n", mediaInfo.Accuracy)
 
 	if mediaInfo.IsSeries {
 		finalPath = o.seriesDir + mediaInfo.Title

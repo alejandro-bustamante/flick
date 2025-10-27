@@ -36,7 +36,8 @@ junk_patterns = [
   "latino",
   "english",
   "dual",
-  "x264"
+  "x264",
+  "ams"
 ]
 
 [extractor]

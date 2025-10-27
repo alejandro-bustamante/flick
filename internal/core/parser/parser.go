@@ -1,6 +1,11 @@
 package parser
 
-import models "github.com/alejandro-bustamante/flick/internal/models"
+import (
+	"path/filepath"
+	"strings"
+
+	models "github.com/alejandro-bustamante/flick/internal/models"
+)
 
 // Tokenizer maneja la división del texto en tokens
 type Tokenizer interface {
@@ -73,6 +78,9 @@ func (p *MediaParser) ParseNormalized(filename string) *models.ParseResult {
 	result := &models.ParseResult{}
 
 	p.logger.Debug("Parsing file: %s", filename)
+
+	ext := filepath.Ext(filename)
+	filename = strings.Trim(filename, ext)
 
 	// Stage 1: Tokenization
 	tokens := p.tokenizer.Tokenize(filename)
