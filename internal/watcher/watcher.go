@@ -9,7 +9,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/alejandro-bustamante/flick/internal/core"
 	"github.com/fsnotify/fsnotify"
 )
 
@@ -20,47 +19,44 @@ type WatcherConfig struct {
 }
 
 type FolderWatcher struct {
-	config WatcherConfig
-	// handler   func(string)
-	organizer *core.Organizer
-	watcher   *fsnotify.Watcher
-	stopCh    chan bool
-	pendingCh chan string
-	done      chan bool
+	Config      WatcherConfig
+	StableFiles chan string
+	watcher     *fsnotify.Watcher
+	stopCh      chan bool
+	pendingCh   chan string
+	done        chan bool
 }
 
-// func NewWatcher(config WatcherConfig, organizer *core.Organizer, handler func(string)) (*FolderWatcher, error) {
-func NewWatcher(config WatcherConfig, organizer *core.Organizer) (*FolderWatcher, error) {
+func NewWatcher(config WatcherConfig) (*FolderWatcher, error) {
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
 		return nil, fmt.Errorf("error creating a watcher: %v", err)
 	}
 
 	fw := &FolderWatcher{
-		config: config,
-		// handler:   handler,
-		organizer: organizer,
-		watcher:   watcher,
-		stopCh:    make(chan bool),
-		pendingCh: make(chan string, 100),
-		done:      make(chan bool),
+		Config:      config,
+		StableFiles: make(chan string),
+		watcher:     watcher,
+		stopCh:      make(chan bool),
+		pendingCh:   make(chan string, 100),
+		done:        make(chan bool),
 	}
 
 	return fw, nil
 }
 
 func (fw *FolderWatcher) Start() error {
-	err := fw.watcher.Add(fw.config.Path)
+	err := fw.watcher.Add(fw.Config.Path)
 	if err != nil {
-		return fmt.Errorf("error adding the path %s: %v", fw.config.Path, err)
+		return fmt.Errorf("error adding the path %s: %v", fw.Config.Path, err)
 	}
 
-	if fw.config.Recursive {
-		filepath.Walk(fw.config.Path, func(path string, info os.FileInfo, err error) error {
+	if fw.Config.Recursive {
+		filepath.Walk(fw.Config.Path, func(path string, info os.FileInfo, err error) error {
 			if err != nil {
 				return nil
 			}
-			if info.IsDir() && path != fw.config.Path {
+			if info.IsDir() && path != fw.Config.Path {
 				fw.watcher.Add(path)
 			}
 			return nil
@@ -70,7 +66,7 @@ func (fw *FolderWatcher) Start() error {
 	go fw.watchFiles()
 	go fw.processStability()
 
-	log.Printf("Watcher iniciado para: %s", fw.config.Path)
+	log.Printf("Watcher iniciado para: %s", fw.Config.Path)
 	return nil
 }
 
@@ -94,17 +90,14 @@ func (fw *FolderWatcher) watchFiles() {
 				return
 			}
 
-			// Only process created or modified files
 			if event.Op&fsnotify.Create == fsnotify.Create ||
 				event.Op&fsnotify.Write == fsnotify.Write {
 
-				// If its a directory and we're on recursive mode, add it to the watcher
-				if info, err := os.Stat(event.Name); err == nil && info.IsDir() && fw.config.Recursive {
+				if info, err := os.Stat(event.Name); err == nil && info.IsDir() && fw.Config.Recursive {
 					fw.watcher.Add(event.Name)
 					continue
 				}
 
-				// If its a file, verify if we should process it
 				if fw.shouldProcessFile(event.Name) {
 					select {
 					case fw.pendingCh <- event.Name:
@@ -123,7 +116,10 @@ func (fw *FolderWatcher) watchFiles() {
 	}
 }
 
+// Needed only to make sure a file e.g. download is not still changing
 func (fw *FolderWatcher) processStability() {
+	defer close(fw.StableFiles)
+
 	pending := make(map[string]time.Time)
 	ticker := time.NewTicker(1 * time.Second)
 	defer ticker.Stop()
@@ -139,11 +135,11 @@ func (fw *FolderWatcher) processStability() {
 		case <-ticker.C:
 			now := time.Now()
 			for filePath, addTime := range pending {
-				if now.Sub(addTime) >= fw.config.StabilityDelay {
+				if now.Sub(addTime) >= fw.Config.StabilityDelay {
 					if fw.isFileStable(filePath) {
-						// fw.handler(filePath)
-						out := fw.organizer.GetFinalDir(filePath)
-						log.Printf("File processed: %s,\n Final dir: %s\n", filePath, out)
+						//Signal that a file is stable for processing
+						fw.StableFiles <- filePath
+
 						delete(pending, filePath)
 					} else {
 						// Reset the time if the file is still changing
@@ -156,7 +152,6 @@ func (fw *FolderWatcher) processStability() {
 }
 
 func (fw *FolderWatcher) shouldProcessFile(filePath string) bool {
-	// File extensions (temporal/incomplete) we should ignore
 	ext := strings.ToLower(filepath.Ext(filePath))
 	tempExtensions := []string{
 		".tmp", ".part", ".crdownload", ".download", ".partial",

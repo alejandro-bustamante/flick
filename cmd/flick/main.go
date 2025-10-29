@@ -36,24 +36,25 @@ func main() {
 	)
 
 	f := finder.NewTMDBFinder(sttgs.Secrets.TMDB_API_Key)
-	o := core.NewOrganizer(p, f, sttgs.Directories.Watch, sttgs.Directories.Movies, sttgs.Directories.Series)
 
+	// 1. Create Watcher config
 	watcherConfig := watcher.WatcherConfig{
 		Path:           sttgs.Directories.Watch,
 		StabilityDelay: 2 * time.Second,
 		Recursive:      true,
 	}
 
-	folderWatcher, err := watcher.NewWatcher(watcherConfig, o)
+	// 2. Create the Watcher
+	folderWatcher, err := watcher.NewWatcher(watcherConfig)
 	if err != nil {
 		log.Fatalf("Error al crear el watcher: %v", err)
 	}
 
-	// --- Start watcher ---
-	err = folderWatcher.Start()
-	if err != nil {
-		log.Fatalf("Error al iniciar el watcher: %v", err)
-	}
+	// 3. Create the Organizer, passing the watcher to it
+	organizer := core.NewOrganizer(p, f, folderWatcher, sttgs.Directories.Movies, sttgs.Directories.Series)
+
+	// 4. Start the Organizer's main logic
+	organizer.Run()
 
 	// --- Start the daemon (blocking function) ---
 	flickDaemon, err := daemon.NewDaemon()
@@ -61,6 +62,8 @@ func main() {
 		log.Fatalf("No se pudo iniciar el daemon: %v", err)
 	}
 
+	// This blocks the main goroutine, while the Organizer
+	// and Watcher run in their own goroutines.
 	flickDaemon.Start()
 
 	log.Println("Flick se ha detenido.")
