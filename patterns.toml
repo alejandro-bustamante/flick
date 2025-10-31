@@ -1,0 +1,44 @@
+[tokenizer]
+separators = [
+  ".",
+  "-",
+  "_",
+  " ",
+  "[",
+  "]",
+  "(",
+  ")",
+  "{",
+  "}",
+]
+
+[cleaner]
+junk_patterns = [
+  "xxx",
+  "rarbg",
+  "yts",
+  "etrg",
+  "yify",
+  "720p",
+  "1080p",
+  "4k",
+  "2160p",
+  "480p",
+  "bluray",
+  "brrip",
+  "web-dl",
+  "webrip",
+  "hdrip",
+  "hdtv",
+  "netflix",
+  "amzn",
+  "spanish",
+  "latino",
+  "english",
+  "dual",
+  "x264",
+  "ams"
+]
+
+[extractor]
+year_range = [1890, 2025]
