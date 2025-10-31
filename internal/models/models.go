@@ -17,13 +17,6 @@ type ParseResult struct {
 	Warnings  []string
 }
 
-type MediaPaths struct {
-	OriginalPath string
-	OriginalDir  string
-	DestinyPath  string
-	DestinyDir   string
-}
-
 type TestCase struct {
 	Input       string
 	Expected    *MediaInfo
