@@ -18,6 +18,7 @@ type Finder interface {
 type Parser interface {
 	Parse(filename string) *models.ParseResult
 	ParseNormalized(filename string) *models.ParseResult
+	NormalizeForComparison(input string) string
 }
 
 type Organizer struct {
@@ -52,13 +53,21 @@ func (o *Organizer) Run() {
 			log.Printf("Organizer received stable file: %s", filePath)
 
 			// Process the file
-			finalPath := o.GetFinalDir(filePath)
-			if finalPath == "" {
+			mediaDirs := o.GetFinalDir(filePath)
+			if mediaDirs.DestinyPath == "" {
 				log.Printf("Could not determine final path for: %s", filePath)
 				continue
 			}
 
-			log.Printf("Calculated final path: %s", finalPath)
+			// Permisions that allows to read and write for any user
+			dirPerm := 0777
+			os.MkdirAll(mediaDirs.DestinyDir, os.FileMode(dirPerm))
+			err := os.Rename(mediaDirs.OriginalPath, mediaDirs.DestinyPath)
+			if err != nil {
+				log.Printf("Could not move to final path. Error: %s", err)
+			}
+
+			log.Printf("Calculated final path: %s", mediaDirs.DestinyPath)
 		}
 
 		log.Println("Watcher channel closed. Organizer stopping.")
@@ -66,7 +75,7 @@ func (o *Organizer) Run() {
 }
 
 // Equivalent to a dry run
-func (o *Organizer) GetFinalDir(filePath string) (finalPath string) {
+func (o *Organizer) GetFinalFilePath(filePath string) (finalPath string) {
 	info, err := os.Stat(filePath)
 	if err != nil {
 		return ""
@@ -95,4 +104,43 @@ func (o *Organizer) GetFinalDir(filePath string) (finalPath string) {
 	}
 
 	return finalPath
+}
+
+func (o *Organizer) GetFinalDir(filePath string) models.MediaPaths {
+	info, err := os.Stat(filePath)
+	if err != nil {
+		return models.MediaPaths{}
+	}
+	if info.IsDir() {
+		return models.MediaPaths{}
+
+	}
+
+	fileName := filepath.Base(filePath)
+	cleanFileName := o.parser.ParseNormalized(fileName)
+	mediaInfo, err := o.finder.GetMediaInfo(*cleanFileName.MediaInfo)
+	if err != nil {
+		fmt.Println(err)
+		return models.MediaPaths{}
+	}
+	fmt.Println(mediaInfo.Title)
+	fmt.Println(mediaInfo.Year)
+	fmt.Printf("Accuracy: %v\n", mediaInfo.Accuracy)
+
+	var mediaPaths models.MediaPaths
+	mediaPaths.OriginalPath = filePath
+	mediaPaths.OriginalDir = filepath.Dir(filePath)
+
+	if mediaInfo.IsSeries {
+		mediaPaths.DestinyDir = o.moviesDir
+		mediaPaths.DestinyPath = o.moviesDir + mediaInfo.Title
+		// finalPath = o.seriesDir + mediaInfo.Title
+	} else {
+		folderName := mediaInfo.Title + "(" + strconv.Itoa(mediaInfo.Year) + ")"
+		// E.G. /base/movies/directory/Titatnic(1999)/Titanic(1999).mkv
+		mediaPaths.DestinyDir = filepath.Join(o.moviesDir, folderName)
+		mediaPaths.DestinyPath = filepath.Join(mediaPaths.DestinyDir, folderName+filepath.Ext(fileName))
+	}
+
+	return mediaPaths
 }

@@ -35,7 +35,7 @@ func main() {
 		logger,
 	)
 
-	f := finder.NewTMDBFinder(sttgs.Secrets.TMDB_API_Key)
+	f := finder.NewTMDBFinder(sttgs.Secrets.TMDB_API_Key, p)
 
 	// 1. Create Watcher config
 	watcherConfig := watcher.WatcherConfig{

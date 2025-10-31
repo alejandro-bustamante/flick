@@ -1,3 +1,4 @@
 bin
 .vscode
 settings.toml
+cmd/flick/__debug*

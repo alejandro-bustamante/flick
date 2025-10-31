@@ -8,12 +8,13 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
-	"unicode" // Importamos unicode
 
+	// Importamos unicode
+	"github.com/alejandro-bustamante/flick/internal/core"
 	models "github.com/alejandro-bustamante/flick/internal/models"
-	"golang.org/x/text/runes"        // Importamos runes
-	"golang.org/x/text/transform"    // Importamos transform
-	"golang.org/x/text/unicode/norm" // Importamos norm
+	// Importamos runes
+	// Importamos transform
+	// Importamos norm
 )
 
 type SearchResponse struct {
@@ -45,23 +46,14 @@ type TVDetailsResponse struct {
 
 type TMDBFinder struct {
 	APIKey string
+	parser core.Parser
 }
 
-func NewTMDBFinder(APIKey string) *TMDBFinder {
+func NewTMDBFinder(APIKey string, p core.Parser) *TMDBFinder {
 	return &TMDBFinder{
 		APIKey: APIKey,
+		parser: p,
 	}
-}
-
-// remove diacritics and converts to lower case
-func normalizeString(input string) string {
-	t := transform.Chain(
-		norm.NFD,
-		runes.Remove(runes.In(unicode.Mn)),
-		norm.NFC,
-	)
-	normalized, _, _ := transform.String(t, input)
-	return strings.ToLower(normalized)
 }
 
 func getYearDigitDiff(year1 int, year2Str string) int {
@@ -91,6 +83,7 @@ func getYearDigitDiff(year1 int, year2Str string) int {
 
 func (f *TMDBFinder) GetMediaInfo(mediaInfo models.MediaInfo) (*models.MediaInfo, error) {
 	bestID, certainty, err := f.searchForID(mediaInfo)
+	mediaInfo.Accuracy = certainty
 	if err != nil {
 		return nil, err
 	}
@@ -112,7 +105,7 @@ func (f *TMDBFinder) GetMediaInfo(mediaInfo models.MediaInfo) (*models.MediaInfo
 		IsSeries: mediaInfo.IsSeries,
 		Season:   mediaInfo.Season,
 		Episode:  mediaInfo.Episode,
-		Accuracy: certainty,
+		Accuracy: mediaInfo.Accuracy,
 	}, nil
 }
 
@@ -134,6 +127,7 @@ func (f *TMDBFinder) searchForID(mediaInfo models.MediaInfo) (bestID int, accura
 	q.Set("language", "en-US")
 	q.Set("page", "1")
 	q.Set("query", mediaInfo.Title)
+	q.Set("primary_release_year", strconv.Itoa(mediaInfo.Year))
 
 	if mediaInfo.Year > 0 {
 		if mediaInfo.IsSeries {
@@ -181,11 +175,11 @@ func (f *TMDBFinder) searchForID(mediaInfo models.MediaInfo) (bestID int, accura
 	bestID = searchResponse.Results[0].ID
 	bestCertainty := 1
 
-	normalizedLocalTitle := normalizeString(mediaInfo.Title)
+	normalizedLocalTitle := f.parser.NormalizeForComparison(mediaInfo.Title)
 
 	for _, result := range searchResponse.Results {
 		currentCertainty := 0
-		normalizedApiTitle := normalizeString(result.Title)
+		normalizedApiTitle := f.parser.NormalizeForComparison(result.Title)
 
 		apiYearStr := ""
 		if result.ReleaseDate != "" {
@@ -195,6 +189,7 @@ func (f *TMDBFinder) searchForID(mediaInfo models.MediaInfo) (bestID int, accura
 			}
 		}
 		yearDiff := getYearDigitDiff(mediaInfo.Year, apiYearStr)
+		fmt.Printf("Year diff %v\n", yearDiff)
 
 		partialTitleMatch := strings.Contains(normalizedLocalTitle, normalizedApiTitle) || strings.Contains(normalizedApiTitle, normalizedLocalTitle)
 		perfectTitleMatch := normalizedLocalTitle == normalizedApiTitle
@@ -220,7 +215,7 @@ func (f *TMDBFinder) searchForID(mediaInfo models.MediaInfo) (bestID int, accura
 				currentCertainty = 2 // parcial title, 2+ digit error
 			}
 		} else {
-			currentCertainty = 1 // No partial or total matches
+			currentCertainty = -1 // No partial or total matches
 		}
 
 		if currentCertainty > bestCertainty {

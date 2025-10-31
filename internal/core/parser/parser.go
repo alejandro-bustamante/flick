@@ -106,7 +106,7 @@ func (p *MediaParser) tokenize(input string) []string {
 	return tokens
 }
 
-// --- Lógica de Cleaner (antes cleaner.go) ---
+// --- Lógica de Cleaner ---
 func (p *MediaParser) isJunk(token string) bool {
 	_, exists := p.junkPatterns[strings.ToLower(token)]
 	return exists
@@ -122,7 +122,7 @@ func (p *MediaParser) clean(tokens []string) []string {
 	return cleaned
 }
 
-// --- Lógica de Extractor (antes extractor.go) ---
+// --- Lógica de Extractor ---
 func (p *MediaParser) extract(tokens []string) *models.MediaInfo {
 	info := &models.MediaInfo{}
 	var titleTokens []string
@@ -244,4 +244,24 @@ func (p *MediaParser) validateTitle(title string) error {
 		return fmt.Errorf("title too short: '%s'", title)
 	}
 	return nil
+}
+
+func (p *MediaParser) NormalizeForComparison(input string) string {
+	// 1. Replace separators
+	temp := input
+	for _, sep := range p.separators {
+		temp = strings.ReplaceAll(temp, sep, " ")
+	}
+
+	// 2. Takeout diacritics
+	t := transform.Chain(
+		norm.NFD,
+		runes.Remove(runes.In(unicode.Mn)),
+		norm.NFC,
+	)
+	normalized, _, _ := transform.String(t, temp)
+
+	// 3. Collapse to spaces and lowercase
+	processed := strings.Join(strings.Fields(normalized), " ")
+	return strings.ToLower(processed)
 }
