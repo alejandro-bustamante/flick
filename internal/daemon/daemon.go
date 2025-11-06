@@ -1,29 +1,30 @@
 package daemon
 
 import (
+	"bufio"
 	"log"
 	"net"
 	"os"
 	"os/signal"
+	"strings"
 	"sync"
 	"syscall"
 )
 
-// SocketPath es la ruta donde se creará el archivo de socket Unix.
 const SocketPath = "/tmp/flick.sock"
 
-// Daemon representa el proceso en segundo plano.
-// Contiene la lógica para iniciar, detener y manejar conexiones.
+type AppController interface {
+	GetStatus() string
+}
+
 type Daemon struct {
 	listener net.Listener
 	wg       sync.WaitGroup
 	quit     chan struct{}
+	app      AppController
 }
 
-// NewDaemon crea e inicializa una nueva instancia del daemon.
-func NewDaemon() (*Daemon, error) {
-	// Asegurarse de que el socket no exista antes de empezar.
-	// Esto previene errores si el daemon anterior no se cerró correctamente.
+func NewDaemon(controller AppController) (*Daemon, error) {
 	if err := os.RemoveAll(SocketPath); err != nil {
 		return nil, err
 	}
@@ -37,15 +38,11 @@ func NewDaemon() (*Daemon, error) {
 	return &Daemon{
 		listener: listener,
 		quit:     make(chan struct{}),
+		app:      controller,
 	}, nil
 }
 
-// Start inicia el daemon, comenzando a aceptar conexiones
-// y esperando una señal de interrupción para detenerse.
 func (d *Daemon) Start() {
-	// Creamos un canal para escuchar las señales del sistema operativo.
-	// Esto nos permite atrapar Ctrl+C (SIGINT) o una señal de terminación (SIGTERM)
-	// para apagar el daemon de forma segura.
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
 
@@ -54,30 +51,19 @@ func (d *Daemon) Start() {
 
 	log.Println("Daemon iniciado. Presiona Ctrl+C para detener.")
 
-	// Esperamos a recibir una señal de apagado.
 	<-sigChan
 
-	// Una vez recibida la señal, iniciamos el proceso de apagado.
 	log.Println("Recibida señal de apagado, deteniendo el daemon...")
 	d.Stop()
 }
 
-// Stop detiene el daemon de forma segura.
 func (d *Daemon) Stop() {
-	// Cerramos el canal 'quit' para señalar a todas las goroutines que deben detenerse.
 	close(d.quit)
-
-	// Cerramos el listener para dejar de aceptar nuevas conexiones.
 	d.listener.Close()
-
-	// Esperamos a que todas las goroutines en el WaitGroup terminen.
-	// En este caso, esperamos a que 'acceptConnections' finalice.
 	d.wg.Wait()
 	log.Println("Daemon detenido.")
 }
 
-// acceptConnections es el bucle principal que acepta nuevas conexiones de clientes.
-// Se ejecuta en su propia goroutine.
 func (d *Daemon) acceptConnections() {
 	defer d.wg.Done()
 
@@ -86,7 +72,6 @@ func (d *Daemon) acceptConnections() {
 		if err != nil {
 			select {
 			case <-d.quit:
-				// Si el canal 'quit' está cerrado, es una salida esperada.
 				return
 			default:
 				log.Println("Error al aceptar conexión:", err)
@@ -94,36 +79,41 @@ func (d *Daemon) acceptConnections() {
 			continue
 		}
 
-		// Por cada conexión, iniciamos una nueva goroutine para manejarla.
-		// Esto permite al daemon manejar múltiples clientes simultáneamente.
 		d.wg.Add(1)
 		go d.handleConnection(conn)
 	}
 }
 
-// handleConnection maneja la lógica para una conexión de cliente individual.
 func (d *Daemon) handleConnection(conn net.Conn) {
 	defer d.wg.Done()
 	defer conn.Close()
 
-	log.Println("Cliente conectado:", conn.RemoteAddr().String())
-
-	// Aquí puedes agregar la lógica para comunicarte con el TUI.
-	// Por ahora, solo enviamos un mensaje de bienvenida.
-	_, err := conn.Write([]byte("¡Bienvenido al daemon de Flick!\n"))
+	cmd, err := bufio.NewReader(conn).ReadString('\n')
 	if err != nil {
-		log.Println("Error al escribir al cliente:", err)
+		if err.Error() != "EOF" {
+			log.Println("Error al leer del cliente:", err)
+		}
 		return
 	}
 
-	// Puedes crear un bucle para leer comandos del TUI aquí.
-	// buffer := make([]byte, 1024)
-	// for {
-	//     n, err := conn.Read(buffer)
-	//     if err != nil {
-	//         log.Println("Cliente desconectado.")
-	//         return
-	//     }
-	//     log.Printf("Recibido: %s", buffer[:n])
-	// }
+	cmd = strings.TrimSpace(cmd) // cleans the command
+	log.Printf("Daemon: Comando recibido: %s", cmd)
+
+	var response string
+
+	switch cmd {
+	case "VERSION":
+		response = "flick v0.1.0-alpha\n"
+
+	case "STATUS":
+		response = d.app.GetStatus() + "\n"
+
+	default:
+		response = "Comando desconocido\n"
+	}
+
+	_, err = conn.Write([]byte(response))
+	if err != nil {
+		log.Println("Error al escribir respuesta al cliente:", err)
+	}
 }
