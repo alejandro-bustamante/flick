@@ -1,3 +1,3 @@
 #!/bin/bash
 
-go build -o ./bin/flick ./flick
+go build -o ./bin/flick ./main.go
