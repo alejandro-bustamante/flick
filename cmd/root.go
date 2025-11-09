@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/alejandro-bustamante/flick/internal/config" // Import new config package
+	"github.com/alejandro-bustamante/flick/internal/config"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )

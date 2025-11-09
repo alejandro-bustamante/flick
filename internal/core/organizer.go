@@ -42,8 +42,15 @@ func NewOrganizer(p Parser, f Finder, w *watcher.FolderWatcher, moviesDir, serie
 }
 
 func (o *Organizer) Run() {
+	if o.watchDir == "" || o.moviesDir == "" || o.seriesDir == "" {
+		log.Println("Error: 'directories.watch', 'directories.movies', or 'directories.series' not set in config.")
+		log.Println("Organizer is idle. Please edit your settings.toml file.")
+		return
+	}
+
 	if err := o.watcher.Start(); err != nil {
-		log.Fatalf("Error starting watcher: %v", err)
+		log.Printf("Error starting watcher on %s: %v", o.watchDir, err)
+		return
 	}
 
 	log.Println("Organizer is running and listening for stable files...")
@@ -109,6 +116,13 @@ func (o *Organizer) GetDestinationPath(filePath string) string {
 }
 
 func (o *Organizer) GetStatus() string {
+	if o.watchDir == "" || o.moviesDir == "" || o.seriesDir == "" {
+		return fmt.Sprintf(
+			"Flick is active, but the Organizer is IDLE.\n" +
+				"Reason: Configuration is incomplete (check 'directories' in settings.toml).",
+		)
+	}
+
 	statusMsg := fmt.Sprintf(
 		"Flick is active.\nMonitoring: %s\nMovies Destination: %s\nSeries Destination: %s",
 		o.watchDir,
@@ -116,4 +130,12 @@ func (o *Organizer) GetStatus() string {
 		o.seriesDir,
 	)
 	return statusMsg
+}
+
+func (o *Organizer) UpdateConfig(p Parser, f Finder, moviesDir, seriesDir string) {
+	o.parser = p
+	o.finder = f
+	o.moviesDir = moviesDir
+	o.seriesDir = seriesDir
+	log.Println("Organizer configuration updated.")
 }

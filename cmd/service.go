@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/alejandro-bustamante/flick/internal/config"
 	"github.com/spf13/cobra"
 )
 
@@ -65,7 +66,19 @@ var serviceInstallCmd = &cobra.Command{
 		}
 
 		fmt.Printf("Service file created at: %s!\n\n", servicePath)
-		fmt.Println("To enable and start the service, run:")
+
+		fmt.Println("IMPORTANT: You must configure Flick before starting the service.")
+
+		settingsPath, _, err := config.GetConfigPaths("")
+		if err != nil {
+			fmt.Printf("Warning: Could not determine default config path: %v\n", err)
+			fmt.Println("Please create your config file manually (e.g., $HOME/.config/flick/settings.toml).")
+		} else {
+			fmt.Printf("Please edit your config file at:\n%s\n", settingsPath)
+			fmt.Println("You MUST add your 'tmdb_api_key' and set your 'directories'.")
+		}
+
+		fmt.Println("\nAfter editing the config, run these commands to start the service:")
 		fmt.Println("  systemctl --user daemon-reload")
 		fmt.Println("  systemctl --user enable --now flick")
 		fmt.Println("\nTo have the service start automatically on boot (without logging in):")
