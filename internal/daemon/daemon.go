@@ -34,7 +34,7 @@ func NewDaemon(controller AppController) (*Daemon, error) {
 		return nil, err
 	}
 
-	log.Println("Daemon escuchando en", SocketPath)
+	log.Println("Daemon listening on", SocketPath)
 	return &Daemon{
 		listener: listener,
 		quit:     make(chan struct{}),
@@ -49,11 +49,11 @@ func (d *Daemon) Start() {
 	d.wg.Add(1)
 	go d.acceptConnections()
 
-	log.Println("Daemon iniciado. Presiona Ctrl+C para detener.")
+	log.Println("Daemon started. Press Ctrl+C to stop.")
 
 	<-sigChan
 
-	log.Println("Recibida señal de apagado, deteniendo el daemon...")
+	log.Println("Recieved shutdown signal, stopping daemon...")
 	d.Stop()
 }
 
@@ -61,7 +61,7 @@ func (d *Daemon) Stop() {
 	close(d.quit)
 	d.listener.Close()
 	d.wg.Wait()
-	log.Println("Daemon detenido.")
+	log.Println("Daemon stopped.")
 }
 
 func (d *Daemon) acceptConnections() {
@@ -74,7 +74,7 @@ func (d *Daemon) acceptConnections() {
 			case <-d.quit:
 				return
 			default:
-				log.Println("Error al aceptar conexión:", err)
+				log.Println("Error accepting connection:", err)
 			}
 			continue
 		}
@@ -91,13 +91,13 @@ func (d *Daemon) handleConnection(conn net.Conn) {
 	cmd, err := bufio.NewReader(conn).ReadString('\n')
 	if err != nil {
 		if err.Error() != "EOF" {
-			log.Println("Error al leer del cliente:", err)
+			log.Println("Error reading from client:", err)
 		}
 		return
 	}
 
 	cmd = strings.TrimSpace(cmd) // cleans the command
-	log.Printf("Daemon: Comando recibido: %s", cmd)
+	log.Printf("Daemon: Recieved command: %s", cmd)
 
 	var response string
 
@@ -109,11 +109,11 @@ func (d *Daemon) handleConnection(conn net.Conn) {
 		response = d.app.GetStatus() + "\n"
 
 	default:
-		response = "Comando desconocido\n"
+		response = "Unknown command\n"
 	}
 
 	_, err = conn.Write([]byte(response))
 	if err != nil {
-		log.Println("Error al escribir respuesta al cliente:", err)
+		log.Println("Error writtin response to the client:", err)
 	}
 }

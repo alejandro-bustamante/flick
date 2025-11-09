@@ -4,13 +4,13 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/alejandro-bustamante/flick/internal/config" // Import new config package
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
 
 var cfgFile string
 
-// RootCmd is the base command with no arguments
 var RootCmd = &cobra.Command{
 	Use:   "flick",
 	Short: "Automated movies and series organizer.",
@@ -27,21 +27,29 @@ func Execute() {
 
 func init() {
 	cobra.OnInitialize(initConfig)
-	RootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "Ruta al archivo de config (default es ./settings.toml)")
+	// Updated help string to be dynamic (dev vs prod)
+	defaultPathDesc := "default is ./settings.toml (dev) or $HOME/.config/flick/settings.toml (release)"
+	RootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", fmt.Sprintf("Config file path (%s)", defaultPathDesc))
 }
 
 func initConfig() {
-	if cfgFile != "" {
-		viper.SetConfigFile(cfgFile)
-	} else {
-		viper.AddConfigPath(".")
-		viper.SetConfigName("settings")
-		viper.SetConfigType("toml")
+	settingsPath, _, err := config.GetConfigPaths(cfgFile)
+	if err != nil {
+		fmt.Printf("Error initializing config: %v\n", err)
+		os.Exit(1)
 	}
 
+	viper.SetConfigFile(settingsPath)
 	viper.AutomaticEnv()
 
-	if err := viper.ReadInConfig(); err == nil {
-		fmt.Println("Usando archivo de config:", viper.ConfigFileUsed())
+	if err := viper.ReadInConfig(); err != nil {
+		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
+			fmt.Printf("Error: Config file not found at %s. A default was created.\n", settingsPath)
+			fmt.Println("Please edit it to add your TMDB API key and paths.")
+		} else {
+			fmt.Printf("Error reading config file: %v\n", err)
+		}
+	} else {
+		fmt.Println("Using config file:", viper.ConfigFileUsed())
 	}
 }

@@ -30,22 +30,22 @@ WantedBy=default.target
 
 var serviceCmd = &cobra.Command{
 	Use:   "service",
-	Short: "Gestiona el servicio de systemd de Flick",
+	Short: "Manage the Flick systemd service",
 }
 
 var serviceInstallCmd = &cobra.Command{
 	Use:   "install",
-	Short: "Instala Flick como un servicio de usuario de systemd",
+	Short: "Install Flick as a systemd user service",
 	Run: func(cmd *cobra.Command, args []string) {
 		exePath, err := os.Executable()
 		if err != nil {
-			fmt.Println("Error al obtener la ruta del ejecutable:", err)
+			fmt.Println("Error getting executable path:", err)
 			os.Exit(1)
 		}
 
 		homeDir, err := os.UserHomeDir()
 		if err != nil {
-			fmt.Println("Error al obtener el directorio home:", err)
+			fmt.Println("Error getting home directory:", err)
 			os.Exit(1)
 		}
 
@@ -55,47 +55,47 @@ var serviceInstallCmd = &cobra.Command{
 		serviceContent := fmt.Sprintf(serviceTemplate, exePath, homeDir)
 
 		if err := os.MkdirAll(serviceDir, 0750); err != nil {
-			fmt.Printf("Error al crear el directorio del servicio (%s): %v\n", serviceDir, err)
+			fmt.Printf("Error creating service directory (%s): %v\n", serviceDir, err)
 			os.Exit(1)
 		}
 
 		if err := os.WriteFile(servicePath, []byte(serviceContent), 0644); err != nil {
-			fmt.Printf("Error al escribir el archivo de servicio (%s): %v\n", servicePath, err)
+			fmt.Printf("Error writing service file (%s): %v\n", servicePath, err)
 			os.Exit(1)
 		}
 
-		fmt.Printf("¡Archivo de servicio creado en: %s!\n\n", servicePath)
-		fmt.Println("Para habilitar e iniciar el servicio, ejecuta:")
+		fmt.Printf("Service file created at: %s!\n\n", servicePath)
+		fmt.Println("To enable and start the service, run:")
 		fmt.Println("  systemctl --user daemon-reload")
 		fmt.Println("  systemctl --user enable --now flick")
-		fmt.Println("\nPara que el servicio se inicie automáticamente al arrancar (sin iniciar sesión):")
+		fmt.Println("\nTo have the service start automatically on boot (without logging in):")
 		fmt.Println("  loginctl enable-linger $(whoami)")
 	},
 }
 
 var serviceUninstallCmd = &cobra.Command{
 	Use:   "uninstall",
-	Short: "Desinstala el servicio de usuario de Flick",
+	Short: "Uninstall the Flick user service",
 	Run: func(cmd *cobra.Command, args []string) {
 		homeDir, err := os.UserHomeDir()
 		if err != nil {
-			fmt.Println("Error al obtener el directorio home:", err)
+			fmt.Println("Error getting home directory:", err)
 			os.Exit(1)
 		}
 		servicePath := filepath.Join(homeDir, ".config/systemd/user/flick.service")
 
 		if _, err := os.Stat(servicePath); os.IsNotExist(err) {
-			fmt.Println("El servicio no parece estar instalado.")
+			fmt.Println("The service does not seem to be installed.")
 			return
 		}
 
 		if err := os.Remove(servicePath); err != nil {
-			fmt.Printf("Error al eliminar el archivo de servicio: %v\n", err)
+			fmt.Printf("Error removing service file: %v\n", err)
 			os.Exit(1)
 		}
 
-		fmt.Println("¡Archivo de servicio eliminado!")
-		fmt.Println("Para detener y deshabilitar el servicio (si se está ejecutando):")
+		fmt.Println("Service file removed!")
+		fmt.Println("To stop and disable the service (if running):")
 		fmt.Println("  systemctl --user disable --now flick")
 		fmt.Println("  systemctl --user daemon-reload")
 	},

@@ -14,7 +14,6 @@ import (
 	"golang.org/x/text/unicode/norm"
 )
 
-// Logger para debugging y testing (importado desde utils)
 type Logger interface {
 	Debug(msg string, args ...any)
 	Info(msg string, args ...any)
@@ -29,10 +28,8 @@ type MediaParser struct {
 	minTitleLength int
 }
 
-// NewMediaParser ahora recibe la configuración directamente
 func NewMediaParser(separators []string, junkPatterns []string, yearRange []int, l Logger) *MediaParser {
 
-	// Procesar junkPatterns (lógica que estaba en NewCleaner)
 	junk := make(map[string]struct{}, len(junkPatterns))
 	for _, p := range junkPatterns {
 		junk[strings.ToLower(p)] = struct{}{}
@@ -42,8 +39,8 @@ func NewMediaParser(separators []string, junkPatterns []string, yearRange []int,
 		logger:         l,
 		separators:     separators,
 		junkPatterns:   junk,
-		yearRange:      [2]int(yearRange), // Lógica de NewExtractor
-		minTitleLength: 1,                 // Lógica de NewValidator
+		yearRange:      [2]int(yearRange),
+		minTitleLength: 1,
 	}
 }
 
@@ -53,15 +50,15 @@ func (p *MediaParser) Parse(filename string) *models.ParseResult {
 
 	p.logger.Debug("Parsing file: %s", filename)
 
-	// Fase 1: Tokenización (interna)
+	// Phase 1: Tokenization (internal)
 	tokens := p.tokenize(filename)
 	p.logger.Debug("Tokens: %v", tokens)
 
-	// Fase 2: Limpieza (interna)
+	// Phase 2: Cleaning (internal)
 	cleanTokens := p.clean(tokens)
 	p.logger.Debug("Clean tokens: %v", cleanTokens)
 
-	// Fase 3: Extracción (interna)
+	// Phase 3: Extraction (internal)
 	info := p.extract(cleanTokens)
 	info.OriginalName = filename
 
@@ -78,26 +75,25 @@ func (p *MediaParser) ParseNormalized(filename string) *models.ParseResult {
 	ext := filepath.Ext(filename)
 	filename = strings.Trim(filename, ext)
 
-	// Stage 1: Tokenization (interna)
+	// Stage 1: Tokenization (internal)
 	tokens := p.tokenize(filename)
 	p.logger.Debug("Tokens: %v", tokens)
 
-	// Stage 2: Normalization (interna)
+	// Stage 2: Normalization (internal)
 	normalizedTokens := p.normalizeTokens(tokens)
 	p.logger.Debug("Normalized tokens: %v", normalizedTokens)
 
-	// Stage 3: Cleaning (interna)
+	// Stage 3: Cleaning (internal)
 	cleanTokens := p.clean(normalizedTokens)
 	p.logger.Debug("Clean tokens: %v", cleanTokens)
 
-	// Stage 4: Extraction (interna)
+	// Stage 4: Extraction (internal)
 	info := p.extract(cleanTokens)
 	info.OriginalName = filename
 
 	result.MediaInfo = info
 	return result
 }
-
 func (p *MediaParser) tokenize(input string) []string {
 	for _, sep := range p.separators {
 		input = strings.ReplaceAll(input, sep, " ")

@@ -1,3 +1,4 @@
 #!/bin/bash
 
-go build -o ./bin/flick ./main.go
+# The -tags "release" flag tells the compiler to use the "path_prod.go" file
+go build -o ./bin/flick -tags "release" ./main.go

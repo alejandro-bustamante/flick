@@ -4,7 +4,6 @@ import (
 	"log"
 	"time"
 
-	// Imports de tu lógica principal
 	config "github.com/alejandro-bustamante/flick/internal/config"
 	"github.com/alejandro-bustamante/flick/internal/core"
 	finder "github.com/alejandro-bustamante/flick/internal/core/finder"
@@ -23,14 +22,18 @@ func init() {
 
 var startCmd = &cobra.Command{
 	Use:   "start",
-	Short: "Inicia el daemon de Flick en primer plano.",
-	Long:  `Inicia el servicio principal de monitoreo y organización.`,
+	Short: "Starts the Flick daemon in the foreground.",
+	Long:  `Starts the main monitoring and organizing service.`,
 	Run: func(cmd *cobra.Command, args []string) {
 
-		// patterns.toml is loaded separetely from settings.toml
-		data, err := config.LoadData("./patterns.toml")
+		_, patternsPath, err := config.GetConfigPaths(cfgFile)
 		if err != nil {
-			log.Fatalf("Error al cargar patterns.toml: %v", err)
+			log.Fatalf("Error getting config paths: %v", err)
+		}
+
+		data, err := config.LoadPatterns(patternsPath) // Use LoadPatterns
+		if err != nil {
+			log.Fatalf("Error loading patterns.toml from %s: %v", patternsPath, err)
 		}
 
 		logger := utils.NewLogger("debug")
@@ -42,15 +45,15 @@ var startCmd = &cobra.Command{
 		)
 
 		apiKey := viper.GetString("secrets.tmdb_api_key")
-		if apiKey == "" {
-			log.Fatalf("Error: 'secrets.tmdb_api_key' no encontrada en settings.toml")
+		if apiKey == "" || apiKey == "YOUR_API_KEY_HERE" {
+			log.Fatalf("Error: 'secrets.tmdb_api_key' not found or not set in %s", viper.ConfigFileUsed())
 		}
 		f := finder.NewTMDBFinder(apiKey, p)
 
 		// --- Watcher ---
 		watchDir := viper.GetString("directories.watch")
 		if watchDir == "" {
-			log.Fatalf("Error: 'directories.watch' no encontrada en settings.toml")
+			log.Fatalf("Error: 'directories.watch' not found in %s", viper.ConfigFileUsed())
 		}
 		watcherConfig := watcher.WatcherConfig{
 			Path:           watchDir,
@@ -59,7 +62,7 @@ var startCmd = &cobra.Command{
 		}
 		folderWatcher, err := watcher.NewWatcher(watcherConfig)
 		if err != nil {
-			log.Fatalf("Error al crear el watcher: %v", err)
+			log.Fatalf("Error creating watcher: %v", err)
 		}
 
 		// --- Organizer ---
@@ -75,11 +78,11 @@ var startCmd = &cobra.Command{
 		// --- Daemon ---
 		flickDaemon, err := daemon.NewDaemon(organizer)
 		if err != nil {
-			log.Fatalf("No se pudo iniciar el daemon: %v", err)
+			log.Fatalf("Could not start daemon: %v", err)
 		}
-		log.Println("Flick daemon iniciado. Presiona Ctrl+C para detener.")
+		log.Println("Flick daemon started. Press Ctrl+C to stop.")
 		flickDaemon.Start()
 
-		log.Println("Flick se ha detenido.")
+		log.Println("Flick has stopped.")
 	},
 }

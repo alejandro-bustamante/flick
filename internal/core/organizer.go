@@ -109,15 +109,8 @@ func (o *Organizer) GetDestinationPath(filePath string) string {
 }
 
 func (o *Organizer) GetStatus() string {
-	// Tienes acceso a todo el estado del organizer aquí.
-	// o.watchDir
-	// o.moviesDir
-	// o.seriesDir
-	// o.watcher (podrías preguntar al watcher cuántos archivos está viendo)
-
-	// Por ahora, un simple mensaje:
 	statusMsg := fmt.Sprintf(
-		"Flick está activo.\nMonitoreando: %s\nDestino Películas: %s\nDestino Series: %s",
+		"Flick is active.\nMonitoring: %s\nMovies Destination: %s\nSeries Destination: %s",
 		o.watchDir,
 		o.moviesDir,
 		o.seriesDir,
