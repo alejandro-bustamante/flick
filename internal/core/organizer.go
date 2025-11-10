@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"sync"
 
 	"github.com/alejandro-bustamante/flick/internal/models"
 	"github.com/alejandro-bustamante/flick/internal/watcher"
@@ -28,6 +29,7 @@ type Organizer struct {
 	watchDir  string
 	moviesDir string
 	seriesDir string
+	mu        sync.RWMutex
 }
 
 func NewOrganizer(p Parser, f Finder, w *watcher.FolderWatcher, moviesDir, seriesDir string) *Organizer {
@@ -84,6 +86,9 @@ func (o *Organizer) Run() {
 
 // Equivalent to a dry run
 func (o *Organizer) GetDestinationPath(filePath string) string {
+	o.mu.RLock()
+	defer o.mu.RUnlock()
+
 	info, err := os.Stat(filePath)
 	if err != nil {
 		return ""
@@ -116,6 +121,9 @@ func (o *Organizer) GetDestinationPath(filePath string) string {
 }
 
 func (o *Organizer) GetStatus() string {
+	o.mu.RLock()
+	defer o.mu.RUnlock()
+
 	if o.watchDir == "" || o.moviesDir == "" || o.seriesDir == "" {
 		return fmt.Sprintf(
 			"Flick is active, but the Organizer is IDLE.\n" +
@@ -133,6 +141,9 @@ func (o *Organizer) GetStatus() string {
 }
 
 func (o *Organizer) UpdateConfig(p Parser, f Finder, moviesDir, seriesDir string) {
+	o.mu.Lock()
+	defer o.mu.Unlock()
+
 	o.parser = p
 	o.finder = f
 	o.moviesDir = moviesDir

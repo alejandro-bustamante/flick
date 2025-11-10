@@ -22,9 +22,10 @@ type Daemon struct {
 	wg       sync.WaitGroup
 	quit     chan struct{}
 	app      AppController
+	reloadFn func()
 }
 
-func NewDaemon(controller AppController) (*Daemon, error) {
+func NewDaemon(controller AppController, reloadFunc func()) (*Daemon, error) {
 	if err := os.RemoveAll(SocketPath); err != nil {
 		return nil, err
 	}
@@ -39,6 +40,7 @@ func NewDaemon(controller AppController) (*Daemon, error) {
 		listener: listener,
 		quit:     make(chan struct{}),
 		app:      controller,
+		reloadFn: reloadFunc,
 	}, nil
 }
 
@@ -107,6 +109,15 @@ func (d *Daemon) handleConnection(conn net.Conn) {
 
 	case "STATUS":
 		response = d.app.GetStatus() + "\n"
+
+	case "RELOAD":
+		if d.reloadFn != nil {
+			log.Println("Daemon: Executing reload command.")
+			d.reloadFn()
+			response = "Configuration reloaded.\n"
+		} else {
+			response = "Reload not supported.\n"
+		}
 
 	default:
 		response = "Unknown command\n"
