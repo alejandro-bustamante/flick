@@ -2,3 +2,4 @@ bin
 .vscode
 settings.toml
 cmd/flick/__debug*
+scraper_results.txt
